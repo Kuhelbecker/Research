@@ -1,0 +1,25 @@
+{
+  "resources": [
+    {
+      "name": "",
+      "chatId": "",
+      "logChatId": ""
+    }
+  ],
+  "lastReposted": [
+    {
+      "resource": "",
+      "itemId": "",
+      "dateTime": ""
+    }
+  ],
+  "settings": {
+    "chatId": 0,
+    "timerPeriod": {
+      "hours": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "contentCount": 0
+  }
+}
