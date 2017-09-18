@@ -115,6 +115,8 @@ namespace TeleReposter
 
                     var lastAddedItemId = items.First().id;
 
+                    var repostedItems = new List<Item>();
+
                     foreach (var item in items)
                     {
                         if (item.id == lastReposted.itemId)
@@ -122,8 +124,10 @@ namespace TeleReposter
                             break;
                         }
 
-                        mediaItems.Add(new RepostedMedia {Resource = resource, Items = new List<Item> {item}});
+                        repostedItems.Add(item);
                     }
+
+                    mediaItems.Add(new RepostedMedia { Resource = resource, Items = repostedItems });
 
                     lastReposted.itemId = lastAddedItemId;
                     lastReposted.dateTime = DateTime.Now;
@@ -131,7 +135,7 @@ namespace TeleReposter
                 }
             }
 
-            return mediaItems.DistinctBy(i=>i.Resource.name).ToList();
+            return mediaItems;
         }
 
         private InstagramMediaJson TryGetJson(string response)
