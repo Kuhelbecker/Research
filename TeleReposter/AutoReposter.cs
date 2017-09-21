@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Telegram.Bot.Types;
-using TeleReposter.Extensions;
 using TeleReposter.Extensions.String;
 using TeleReposter.Models.Instagram;
 using TeleReposter.Models.Reposter;
@@ -64,7 +63,29 @@ namespace TeleReposter
             this.Bot = new Bot();
         }
 
-        public List<RepostedMedia> CollectMedia()
+        private RepostedMedia GetRepostedMedia(Resource resource, List<Item> items)
+        {
+            var lastReposted = this.Config.lastReposted.FirstOrDefault(lr => lr.resource == resource.name);
+
+            if (lastReposted == null)
+            {
+                this.Config.lastReposted.Add(new LastReposted { resource = resource.name, itemId = items.First().id, dateTime = DateTime.Now });
+
+                this.UpdateConfig();
+
+                return new RepostedMedia { Resource = resource, Items = items.Take(this.Config.settings.contentCount).ToList() };
+            }
+
+            var repostedItems = items.TakeWhile(item => item.id != lastReposted.itemId).ToList();
+
+            lastReposted.itemId = items.First().id;
+            lastReposted.dateTime = DateTime.Now;
+            this.UpdateConfig();
+
+            return new RepostedMedia { Resource = resource, Items = repostedItems };
+        }
+
+        private List<RepostedMedia> CollectMedia()
         {
             var mediaItems = new List<RepostedMedia>();
 
@@ -83,10 +104,17 @@ namespace TeleReposter
                         this.Bot.LogToChannel(-1001107875397, ex);
                         continue;
                     }
-                    
-                    var lastReposted = this.Config.lastReposted.FirstOrDefault(lr => lr.resource == resource.name);
 
-                    var instagramMedia = this.TryGetJson(response);
+                    var instagramMedia = new InstagramMediaJson();
+
+                    try
+                    {
+                        instagramMedia = response.FromJsonTo<InstagramMediaJson>();
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Bot.LogToChannel(-1001107875397, ex);
+                    }
 
                     var items = instagramMedia?.items;
 
@@ -95,42 +123,11 @@ namespace TeleReposter
                         continue;
                     }
 
-                    if (lastReposted == null)
-                    {
-                        mediaItems.Add(new RepostedMedia { Resource = resource,  Items = items.Take(this.Config.settings.contentCount).ToList()});
-
-                        this.Config.lastReposted.Add(new LastReposted { resource = resource.name, itemId = items.First().id, dateTime = DateTime.Now });
-
-                        this.UpdateConfig();
-
-                        continue;
-                    }
-
-                    var repostedItems = items.TakeWhile(item => item.id != lastReposted.itemId).ToList();
-
-                    mediaItems.Add(new RepostedMedia { Resource = resource, Items = repostedItems });
-
-                    lastReposted.itemId = items.First().id;
-                    lastReposted.dateTime = DateTime.Now;
-                    this.UpdateConfig();
+                    mediaItems.Add(this.GetRepostedMedia(resource, items));
                 }
             }
 
             return mediaItems;
-        }
-
-        private InstagramMediaJson TryGetJson(string response)
-        {
-            try
-            {
-                return response.FromJsonTo<InstagramMediaJson>();
-            }
-            catch (Exception ex)
-            {
-                this.Bot.LogToChannel(-1001107875397, ex);
-            }
-
-            return null;
         }
 
         private void UpdateConfig()
