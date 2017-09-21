@@ -22,16 +22,14 @@ namespace TeleReposter
         public AutoReposter(string configFilePath)
         {
             this._configFilePath = configFilePath;
+
+            this.Intiallize();
         }
         public void Repost(object state)
         {
-            this.Intiallize();
-
             this.Bot.LogToChannel(-1001107875397, "*RepostMedia.Start*");
 
-            var mediaItems = new List<RepostedMedia>();
-
-            mediaItems.AddRange(this.CollectMedia());
+            var mediaItems = this.CollectMedia();
 
             this.Bot.LogToChannel(-1001107875397,
                 "*RepostMedia*" + Environment.NewLine +
@@ -90,12 +88,7 @@ namespace TeleReposter
 
                     var instagramMedia = this.TryGetJson(response);
 
-                    if (instagramMedia == null)
-                    {
-                        continue;
-                    }
-
-                    var items = instagramMedia.items;
+                    var items = instagramMedia?.items;
 
                     if (items == null || items.Count == 0)
                     {
@@ -113,23 +106,11 @@ namespace TeleReposter
                         continue;
                     }
 
-                    var lastAddedItemId = items.First().id;
-
-                    var repostedItems = new List<Item>();
-
-                    foreach (var item in items)
-                    {
-                        if (item.id == lastReposted.itemId)
-                        {
-                            break;
-                        }
-
-                        repostedItems.Add(item);
-                    }
+                    var repostedItems = items.TakeWhile(item => item.id != lastReposted.itemId).ToList();
 
                     mediaItems.Add(new RepostedMedia { Resource = resource, Items = repostedItems });
 
-                    lastReposted.itemId = lastAddedItemId;
+                    lastReposted.itemId = items.First().id;
                     lastReposted.dateTime = DateTime.Now;
                     this.UpdateConfig();
                 }
