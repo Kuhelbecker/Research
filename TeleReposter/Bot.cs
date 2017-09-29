@@ -25,6 +25,13 @@ namespace TeleReposter
                        "message:" + Environment.NewLine +
                        exception.Message;
 
+            if (exception.InnerException != null)
+            {
+                text += Environment.NewLine +
+                        "inner exception message:" + Environment.NewLine + 
+                        exception.InnerException.Message;
+            }
+
             await this.Client.SendTextMessageAsync(chatId, text);
         }
 

@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -7,22 +6,20 @@ using Telegram.Bot.Types;
 using TeleReposter.Extensions.String;
 using TeleReposter.Models.Instagram;
 using TeleReposter.Models.Reposter;
+using TeleReposter.Services;
 
 namespace TeleReposter
 {
     public class AutoReposter
     {
-        private Bot Bot { get; set; }
+        private Bot Bot { get;}
 
         private MediaResourcesConfig Config { get; set; }
 
-        private readonly string _configFilePath;
-
         public AutoReposter(string configFilePath)
         {
-            this._configFilePath = configFilePath;
-
-            this.Intiallize();
+            this.Config = new ConfigService().Get<MediaResourcesConfig>(configFilePath);
+            this.Bot = new Bot();
         }
         public void Repost(object state)
         {
@@ -57,12 +54,6 @@ namespace TeleReposter
             }
         }
 
-        private void Intiallize()
-        {
-            this.Config = System.IO.File.ReadAllText(this._configFilePath).FromJsonTo<MediaResourcesConfig>();
-            this.Bot = new Bot();
-        }
-
         private RepostedMedia GetRepostedMedia(Resource resource, List<Item> items)
         {
             var lastReposted = this.Config.lastReposted.FirstOrDefault(lr => lr.resource == resource.name);
@@ -71,7 +62,7 @@ namespace TeleReposter
             {
                 this.Config.lastReposted.Add(new LastReposted { resource = resource.name, itemId = items.First().id, dateTime = DateTime.Now });
 
-                this.UpdateConfig();
+                this.Config.Update();
 
                 return new RepostedMedia { Resource = resource, Items = items.Take(this.Config.settings.contentCount).ToList() };
             }
@@ -80,7 +71,7 @@ namespace TeleReposter
 
             lastReposted.itemId = items.First().id;
             lastReposted.dateTime = DateTime.Now;
-            this.UpdateConfig();
+            this.Config.Update();
 
             return new RepostedMedia { Resource = resource, Items = repostedItems };
         }
@@ -128,11 +119,6 @@ namespace TeleReposter
             }
 
             return mediaItems;
-        }
-
-        private void UpdateConfig()
-        {
-            System.IO.File.WriteAllText(this._configFilePath, JsonConvert.SerializeObject(this.Config, Formatting.Indented));
         }
     }
 }
